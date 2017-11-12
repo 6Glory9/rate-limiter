@@ -1,12 +1,3 @@
-/**
- * Caijiajia confidential
- * <p>
- * Copyright (C) 2016 Shanghai Shuhe Co., Ltd. All rights reserved.
- * <p>
- * No parts of this file may be reproduced or transmitted in any form or by any means,
- * electronic, mechanical, photocopying, recording, or otherwise, without prior written
- * permission of Shanghai Shuhe Co., Ltd.
- */
 package cn.wukq.ratelimiter.client;
 
 import org.apache.commons.lang3.StringUtils;

@@ -1,4 +1,4 @@
-package cn.caijiajia.jasmine;
+package cn.wukq.ratelimiter.client;
 
 
 import cn.wukq.ratelimiter.client.RateLimiterClient;
