@@ -24,8 +24,8 @@ import java.util.*;
 
 /**
  * A wrapper of the Spring redis client.
- * @author Elliott
  *
+ * @author wukaiqiang
  */
 public class RedisClient implements InitializingBean {
 
