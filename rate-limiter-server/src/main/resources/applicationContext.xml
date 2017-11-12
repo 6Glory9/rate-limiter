@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:component-scan base-package="cn.wukq">
+        <context:exclude-filter expression="org.springframework.stereotype.Controller" type="annotation"/>
+    </context:component-scan>
+
+    <import resource="classpath:applicationContext-rateLimiter.xml"/>
+
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+        <property name="location">
+            <value>classpath:spring-config.properties</value>
+        </property>
+    </bean>
+
+    <bean id="dataSource" class="org.apache.tomcat.jdbc.pool.DataSource">
+        <property name="driverClassName" value="${mysql.driver}"/>
+        <property name="url"
+                  value="jdbc:mysql://${mysql.address.rateLimiter}/sequence?useUnicode=true&amp;characterEncoding=utf8"/>
+        <property name="username" value="${mysql.username.rateLimiter}"/>
+        <property name="password" value="${mysql.password.rateLimiter}"/>
+        <property name="initialSize" value="${jdbc.connection.initialSize}"/>
+        <property name="minIdle" value="${jdbc.connection.minIdle}"/>
+        <property name="maxActive" value="${jdbc.connection.maxActive}"/>
+        <property name="maxWait" value="60000"/>
+        <property name="timeBetweenEvictionRunsMillis" value="60000"/>
+        <property name="minEvictableIdleTimeMillis" value="300000"/>
+        <property name="defaultTransactionIsolation" value="2"/>
+        <property name="validationQuery" value="SELECT 'x'"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="testOnBorrow" value="true"/>
+        <property name="testOnReturn" value="false"/>
+        <property name="removeAbandoned" value="true"/>
+        <property name="removeAbandonedTimeout" value="600"/>
+        <property name="logAbandoned" value="true"/>
+        <property name="jdbcInterceptors" value="ConnectionState;StatementFinalizer"/>
+    </bean>
+</beans>

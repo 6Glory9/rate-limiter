@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean id="rateLimiterLua" class="org.springframework.data.redis.core.script.DefaultRedisScript">
+        <property name="location" value="classpath:rate_limiter.lua"/>
+        <property name="resultType" value="java.lang.Long"/>
+    </bean>
+
+    <bean id="rateLimiterRedisClient" class="cn.wukq.ratelimiter.client.RedisClient">
+        <property name="hostName" value="${redis.host.user.rateLimiter}"/>
+        <property name="port" value="${redis.port.user.rateLimiter}"/>
+        <property name="database" value="${redis.database.user.rateLimiter}"/>
+    </bean>
+
+</beans>

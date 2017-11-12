@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.caijiajia.sequence.mapper.RateLimiterInfoMapper">
+    <select id="selectAll" resultType="RateLimiterInfo">
+        select `name`,apps,max_permits as maxPermits,`rate`
+        from rate_limiter_info
+    </select>
+
+    <insert id="saveOrUpdate" parameterType="map">
+        insert into rate_limiter_info(`name`, `apps`, `max_permits`, `rate`)
+        VALUES (#{name},#{apps},#{maxPermits},#{rate})
+        on duplicate key update
+        apps=#{apps},
+        max_permits=#{maxPermits},
+        rate=#{rate}
+    </insert>
+
+    <select id="selectByName" parameterType="map" resultType="RateLimiterInfo">
+        select `name`,apps,max_permits as maxPermits,`rate`
+        from rate_limiter_info
+        where `name`=#{name}
+    </select>
+
+
+    <delete id="deleteByName" parameterType="map">
+        delete from rate_limiter_info
+        where `name`=#{name}
+    </delete>
+</mapper>

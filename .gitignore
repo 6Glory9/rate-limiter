@@ -1,0 +1,16 @@
+**/target/
+.settings
+.classpath
+.project
+/logPath_IS_UNDEFINED/
+.idea/
+.cache
+.node_modules/
+*.iml
+out/
+.DS_Store
+build.log
+.swp
+rebel.xml
+node_modules
+
