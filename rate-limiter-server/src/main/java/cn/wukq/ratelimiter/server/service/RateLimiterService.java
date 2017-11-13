@@ -7,13 +7,12 @@ import cn.wukq.ratelimiter.server.domain.RateLimiterInfo;
 import cn.wukq.ratelimiter.server.form.RateLimiterForm;
 import cn.wukq.ratelimiter.server.mapper.RateLimiterInfoMapper;
 import cn.wukq.ratelimiter.server.vo.RateLimiterVo;
-import com.alibaba.fastjson.JSONObject;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.connection.StringRedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
@@ -24,8 +23,10 @@ import redis.clients.util.JedisByteHashMap;
 import javax.annotation.Resource;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -33,7 +34,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class RateLimiterService {
+public class RateLimiterService implements InitializingBean {
 
     @Resource(name = "rateLimiterRedisClient")
     private RedisClient redisClient;
@@ -45,30 +46,7 @@ public class RateLimiterService {
     private RateLimiterInfoMapper rateLimiterInfoMapper;
 
 
-    @Autowired
-    private RateLimiterClient rateLimiterClient;
-
-
-    /**
-     * diff db 和redis 中桶定义是否有差异
-     * 如果db中有，但是redis 中不存在那么在redis中加上
-     */
-    public void diffDbAndRedis() {
-        try {
-            log.info("diff db and redis job start.....");
-            List<RateLimiterInfo> rateLimiterInfoList = rateLimiterInfoMapper.selectAll();
-            for (RateLimiterInfo rateLimiterInfo : rateLimiterInfoList) {
-                redisClient.getRedisTemplate()
-                        .execute(rateLimiterLua,
-                                ImmutableList.of(getKey(rateLimiterInfo.getName()), RateLimiterConstants.RATE_LIMITER_INIT_METHOD),
-                                rateLimiterInfo.getMaxPermits().toString(), rateLimiterInfo.getRate().toString(), rateLimiterInfo.getApps());
-            }
-            log.info("diff db and redis job end.....");
-        } catch (Exception e) {
-            log.error("diff db and redis error.....", e);
-        }
-
-    }
+    private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
 
     private String getKey(String key) {
@@ -126,8 +104,8 @@ public class RateLimiterService {
         rateLimiterInfoMapper.saveOrUpdate(form.getName(), apps, form.getMaxPermits(), form.getRate());
         redisClient.getRedisTemplate()
                 .execute(rateLimiterLua,
-                        ImmutableList.of(getKey(form.getName()), RateLimiterConstants.RATE_LIMITER_INIT_METHOD),
-                        form.getMaxPermits() + "", form.getRate() + "", apps);
+                        ImmutableList.of(getKey(form.getName())),
+                        RateLimiterConstants.RATE_LIMITER_INIT_METHOD, form.getMaxPermits() + "", form.getRate() + "", apps);
     }
 
 
@@ -146,30 +124,31 @@ public class RateLimiterService {
             }
             redisClient.getRedisTemplate()
                     .execute(rateLimiterLua,
-                            ImmutableList.of(getKey(name), RateLimiterConstants.RATE_LIMITER_INIT_METHOD),
-                            rateLimiterInfo.getMaxPermits().toString(), rateLimiterInfo.getRate().toString(), StringUtils.join(contexts, ","));
+                            ImmutableList.of(getKey(name)),
+                            RateLimiterConstants.RATE_LIMITER_INIT_METHOD, rateLimiterInfo.getMaxPermits().toString(), rateLimiterInfo.getRate().toString(), StringUtils.join(contexts, ","));
         }
     }
 
-    public Map<String, Object> testRateLimiter(JSONObject jsonObject) {
-        Map<String, Object> result = Maps.newHashMap();
-        Integer count = jsonObject.getInteger("count");
 
-        Long startTime = System.currentTimeMillis();
-        int successCount = 0;
-        int failCount = 0;
-        for (int i = 0; i < count; i++) {
-            if (rateLimiterClient.acquire("","performance_test")) {
-                successCount++;
-            } else {
-                failCount++;
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        executorService.scheduleAtFixedRate(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    log.info("diff db and redis job start.....");
+                    List<RateLimiterInfo> rateLimiterInfoList = rateLimiterInfoMapper.selectAll();
+                    for (RateLimiterInfo rateLimiterInfo : rateLimiterInfoList) {
+                        redisClient.getRedisTemplate()
+                                .execute(rateLimiterLua,
+                                        ImmutableList.of(getKey(rateLimiterInfo.getName())),
+                                        RateLimiterConstants.RATE_LIMITER_INIT_METHOD, rateLimiterInfo.getMaxPermits().toString(), rateLimiterInfo.getRate().toString(), rateLimiterInfo.getApps());
+                    }
+                    log.info("diff db and redis job end.....");
+                } catch (Exception e) {
+                    log.error("diff db and redis error.....", e);
+                }
             }
-        }
-        result.put("successCount", successCount);
-        result.put("failCount", failCount);
-        result.put("interval", (System.currentTimeMillis() - startTime) + "ms");
-        return result;
+        }, 0, 1, TimeUnit.MINUTES);
     }
-
-
 }

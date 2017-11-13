@@ -52,7 +52,7 @@ local function acquire(key, permits, curr_mill_second, context)
     --- 令牌桶刚刚创建，上一次获取令牌的毫秒数为空
     --- 根据和上一次向桶里添加令牌的时间和当前时间差，触发式往桶里添加令牌，并且更新上一次向桶里添加令牌的时间
     --- 如果向桶里添加的令牌数不足一个，则不更新上一次向桶里添加令牌的时间
-    if (type(last_mill_second) ~= 'boolean' and last_mill_second ~= false and last_mill_second ~= nil) then
+    if (type(last_mill_second) ~= 'boolean'  and last_mill_second ~= nil) then
         local reverse_permits = math.floor(((curr_mill_second - last_mill_second) / 1000) * rate)
         local expect_curr_permits = reverse_permits + curr_permits;
         local_curr_permits = math.min(expect_curr_permits, max_permits);
@@ -90,9 +90,7 @@ local function init(key, max_permits, rate, apps)
     local org_rate = rate_limit_info[4]
     local org_apps = rate_limit_info[5]
 
-    if (org_max_permits == nil) then
-        redis.pcall("HMSET", key, "max_permits", max_permits, "rate", rate, "curr_permits", max_permits, "apps", apps)
-    elseif apps ~= org_apps or rate ~= org_rate or max_permits ~= org_max_permits then
+    if (org_max_permits == nil) or (apps ~= org_apps or rate ~= org_rate or max_permits ~= org_max_permits) then
         redis.pcall("HMSET", key, "max_permits", max_permits, "rate", rate, "curr_permits", max_permits, "apps", apps)
     end
     return 1;
@@ -110,12 +108,12 @@ end
 
 
 local key = KEYS[1]
-local method = KEYS[2]
+local method = ARGV[1]
 
 if method == 'acquire' then
-    return acquire(key, ARGV[1], ARGV[2], ARGV[3])
+    return acquire(key, ARGV[2], ARGV[3], ARGV[4])
 elseif method == 'init' then
-    return init(key, ARGV[1], ARGV[2], ARGV[3])
+    return init(key, ARGV[2], ARGV[3], ARGV[4])
 elseif method == 'delete' then
     return delete(key)
 else

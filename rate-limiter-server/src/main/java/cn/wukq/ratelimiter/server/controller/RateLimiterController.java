@@ -45,10 +45,4 @@ public class RateLimiterController {
     }
 
 
-    @RequestMapping(value = "/rate-limiters/test", method = RequestMethod.POST)
-    public Map<String, Object> testRateLimiter(@RequestBody JSONObject jsonObject) {
-        return rateLimiterService.testRateLimiter(jsonObject);
-    }
-
-
 }
