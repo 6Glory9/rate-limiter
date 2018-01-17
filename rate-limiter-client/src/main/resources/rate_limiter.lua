@@ -34,10 +34,10 @@ end
 --- @param context 使用令牌的应用标识
 local function acquire(key, permits, curr_mill_second, context)
     local rate_limit_info = redis.pcall("HMGET", key, "last_mill_second", "curr_permits", "max_permits", "rate", "apps")
-    local last_mill_second = rate_limit_info[1]
+    local last_mill_second = tonumber(rate_limit_info[1])
     local curr_permits = tonumber(rate_limit_info[2])
     local max_permits = tonumber(rate_limit_info[3])
-    local rate = rate_limit_info[4]
+    local rate = tonumber(rate_limit_info[4])
     local apps = rate_limit_info[5]
 
     --- 标识没有配置令牌桶
@@ -53,7 +53,7 @@ local function acquire(key, permits, curr_mill_second, context)
     --- 根据和上一次向桶里添加令牌的时间和当前时间差，触发式往桶里添加令牌，并且更新上一次向桶里添加令牌的时间
     --- 如果向桶里添加的令牌数不足一个，则不更新上一次向桶里添加令牌的时间
     if (type(last_mill_second) ~= 'boolean'  and last_mill_second ~= nil) then
-        local reverse_permits = math.floor(((curr_mill_second - last_mill_second) / 1000) * rate)
+        local reverse_permits = math.floor(((tonumber(curr_mill_second) - last_mill_second) / 1000) * rate)
         local expect_curr_permits = reverse_permits + curr_permits;
         local_curr_permits = math.min(expect_curr_permits, max_permits);
 
@@ -69,7 +69,7 @@ local function acquire(key, permits, curr_mill_second, context)
     local result = -1
     if (local_curr_permits - permits >= 0) then
         result = 1
-        redis.pcall("HSET", key, "curr_permits", local_curr_permits - permits)
+        redis.pcall("HSET", key, "curr_permits", local_curr_permits - tonumber(permits))
     else
         redis.pcall("HSET", key, "curr_permits", local_curr_permits)
     end
@@ -86,14 +86,16 @@ end
 --- @param apps  可以使用令牌桶的应用列表，应用之前用逗号分隔
 local function init(key, max_permits, rate, apps)
     local rate_limit_info = redis.pcall("HMGET", key, "last_mill_second", "curr_permits", "max_permits", "rate", "apps")
-    local org_max_permits = tonumber(rate_limit_info[3])
-    local org_rate = rate_limit_info[4]
+    local org_max_permits = rate_limit_info[3]
+    local org_rate =rate_limit_info[4]
     local org_apps = rate_limit_info[5]
 
     if (org_max_permits == nil) or (apps ~= org_apps or rate ~= org_rate or max_permits ~= org_max_permits) then
         redis.pcall("HMSET", key, "max_permits", max_permits, "rate", rate, "curr_permits", max_permits, "apps", apps)
+        return 1;
     end
-    return 1;
+
+    return 0;
 end
 
 
@@ -119,15 +121,3 @@ elseif method == 'delete' then
 else
     --ignore
 end
-
-
-
-
-
-
-
-
-
-
-
-

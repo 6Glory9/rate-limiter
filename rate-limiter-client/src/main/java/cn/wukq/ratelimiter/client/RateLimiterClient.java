@@ -31,13 +31,13 @@ public class RateLimiterClient {
      * 获取令牌，访问redis异常算做成功
      * 默认的permits为1
      *
-     * @param context
+     * @param app
      * @param key
      * @return
      */
-    public boolean acquire(String context, String key) {
+    public boolean acquire(String app, String key) {
         Assert.notNull(key);
-        Token token = acquireToken(context, key);
+        Token token = acquireToken(app, key);
         return token.isPass() || token.isAccessRedisFail();
     }
 
@@ -46,26 +46,26 @@ public class RateLimiterClient {
      * 获取{@link Token}
      * 默认的permits为1
      *
-     * @param context
+     * @param app
      * @param key
      * @return
      */
-    public Token acquireToken(String context, String key) {
-        Assert.notNull(context);
+    public Token acquireToken(String app, String key) {
+        Assert.notNull(app);
         Assert.notNull(key);
-        return acquireToken(context, key, 1);
+        return acquireToken(app, key, 1);
     }
 
     /**
      * 获取{@link Token}
      *
-     * @param context
+     * @param app
      * @param key
      * @param permits
      * @return
      */
-    public Token acquireToken(String context, String key, Integer permits) {
-        Assert.notNull(context);
+    public Token acquireToken(String app, String key, Integer permits) {
+        Assert.notNull(app);
         Assert.notNull(key);
         Assert.notNull(permits);
         Token token;
@@ -76,14 +76,14 @@ public class RateLimiterClient {
                     return connection.time();
                 }
             });
-            Long acquire = redisClient.getRedisTemplate().execute(rateLimiterClientLua, ImmutableList.of(getKey(key)), RateLimiterConstants.RATE_LIMITER_ACQUIRE_METHOD, permits.toString(), currMillSecond.toString(), context);
+            Long acquire = redisClient.getRedisTemplate().execute(rateLimiterClientLua, ImmutableList.of(getKey(key)), RateLimiterConstants.RATE_LIMITER_ACQUIRE_METHOD, permits.toString(), currMillSecond.toString(), app);
 
             if (acquire == 1) {
                 token = Token.PASS;
             } else if (acquire == -1) {
                 token = Token.FUSING;
             } else {
-                logger.error("no rate limit config for context={}", context);
+                logger.error("no rate limit config for app={}", app);
                 token = Token.NO_CONFIG;
             }
         } catch (Throwable e) {
